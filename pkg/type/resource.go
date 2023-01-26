@@ -17,6 +17,8 @@ type TargetPod struct {
 
 type TargetPodList []TargetPod
 
+type SkylinePodList []PodResource
+
 func (p TargetPodList) Len() int { return len(p) }
 func (p TargetPodList) Less(i, j int) bool {
 	if p[i].Percentage != p[j].Percentage {

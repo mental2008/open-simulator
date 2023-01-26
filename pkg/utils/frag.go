@@ -166,6 +166,16 @@ func NodeGpuShareFragAmount(nodeRes simontype.NodeResource, typicalPods simontyp
 	return fragAmount
 }
 
+func NodeGpuFragBasedOnSkyline(nodeRes simontype.NodeResource, skylinePods simontype.SkylinePodList) int64 {
+	gpuMilliLeftTotal := GetGpuMilliLeftTotal(nodeRes)
+	for _, podRes := range skylinePods {
+		if nodeRes.MilliCpuLeft >= podRes.MilliCpu && CanNodeHostPodOnGpuMemory(nodeRes, podRes) {
+			return 0
+		}
+	}
+	return gpuMilliLeftTotal
+}
+
 func NodeGpuShareFragAmountScore(nodeRes simontype.NodeResource, typicalPods simontype.TargetPodList) float64 {
 	fragAmount := NodeGpuShareFragAmount(nodeRes, typicalPods)
 	return fragAmount.FragAmountSumExceptQ3()
@@ -463,6 +473,35 @@ func GetTypicalPods(allPods []*v1.Pod, config v1alpha1.TypicalPodsConfig) simont
 		}
 		return outPodList
 	}
+}
+
+func GetSkylinePods(allPods []*v1.Pod) (skylinePods simontype.SkylinePodList) {
+	skylinePods = make([]simontype.PodResource, 0)
+	podResList := make([]simontype.PodResource, 0)
+	for _, p := range allPods {
+		podRes := GetPodResource(p)
+		podResList = append(podResList, podRes)
+	}
+	sort.SliceStable(podResList, func(i, j int) bool {
+		if podResList[i].MilliCpu < podResList[j].MilliCpu {
+			return true
+		} else if podResList[i].MilliCpu == podResList[j].MilliCpu {
+			return podResList[i].MilliGpu < podResList[j].MilliGpu
+		} else {
+			return false
+		}
+	})
+	for _, p := range podResList {
+		num := len(skylinePods)
+		if num == 0 || (p.MilliCpu > skylinePods[num-1].MilliCpu && p.MilliGpu < skylinePods[num-1].MilliGpu) {
+			skylinePods = append(skylinePods, p)
+		}
+	}
+	log.Infof("Number of Skyline Pods: %d\n", len(skylinePods))
+	for i, p := range skylinePods {
+		log.Infof("[%d] %s\n", i, p.Repr())
+	}
+	return skylinePods
 }
 
 func (fa FragAmount) FragAmountSumExceptQ3() (out float64) {

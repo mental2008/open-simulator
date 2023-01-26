@@ -50,6 +50,7 @@ type Interface interface {
 
 	SetWorkloadPods(pods []*corev1.Pod)
 	SetTypicalPods()
+	SetSkylinePods()
 	RecordPodTotalResourceReq(pods []*corev1.Pod) (int64, int64)
 	RecordNodeTotalResource(nodes []*corev1.Node) (int64, int64)
 	TunePodsByNodeTotalResource(pods []*corev1.Pod, config v1alpha1.WorkloadTuningConfig) []*corev1.Pod
@@ -92,6 +93,7 @@ func Simulate(cluster ResourceTypes, apps []AppResource, opts ...Option) (*simon
 	log.Infof("Number of original workload pods: %d", len(cluster.Pods))
 	sim.SetWorkloadPods(cluster.Pods)
 	sim.SetTypicalPods()
+	sim.SetSkylinePods()
 	sim.ClusterGpuFragReport()
 
 	customConfig := sim.GetCustomConfig()

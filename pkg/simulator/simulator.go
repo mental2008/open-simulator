@@ -52,6 +52,7 @@ type Simulator struct {
 	//
 	workloadPods    []*corev1.Pod
 	typicalPods     simontype.TargetPodList
+	skylinePods     simontype.SkylinePodList
 	nodeResourceMap map[string]simontype.NodeResource
 	customConfig    v1alpha1.CustomConfig
 	fragMemo        sync.Map
@@ -405,6 +406,7 @@ func (sim *Simulator) SchedulePods(pods []*corev1.Pod) []simontype.UnscheduledPo
 			}
 		}
 		sim.ClusterGpuFragReport()
+		sim.ReportFragBasedOnSkyline()
 	}
 	return failedPods
 }

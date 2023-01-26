@@ -74,6 +74,23 @@ func (sim *Simulator) ClusterGpuFragReport() {
 	log.Infof("[Alloc]; Used nodes: %d; Used GPUs: %d; Used GPU Milli: %d; Total GPUs: %d; Arrived GPU Milli: %d\n", clusterUsedNodes, clusterUsedGpus, clusterUsedGpuMilli, clusterTotalGpus, sim.arrPodGpuMilli)
 }
 
+func (sim *Simulator) ReportFragBasedOnSkyline() {
+	nodeStatus := sim.GetClusterNodeStatus()
+	sim.nodeResourceMap = utils.GetNodeResourceMap(nodeStatus)
+	var clusterIdleMilliGpu int64 = 0
+	var clusterFragMilliGpu int64 = 0
+	for _, ns := range nodeStatus {
+		if nodeRes, ok := sim.nodeResourceMap[ns.Node.Name]; ok {
+			fragMilliGpu := utils.NodeGpuFragBasedOnSkyline(nodeRes, sim.skylinePods)
+			clusterFragMilliGpu += fragMilliGpu
+			idleMilliGpu := nodeRes.GetTotalMilliGpuLeft()
+			clusterIdleMilliGpu += idleMilliGpu
+		}
+	}
+	log.Infof("[Skyline] Frag GPU amount: %d, Idle GPU amount: %d, Frag GPU ratio: %.2f%%\n",
+		clusterFragMilliGpu, clusterIdleMilliGpu, 100.0*float64(clusterFragMilliGpu)/float64(clusterIdleMilliGpu))
+}
+
 func (sim *Simulator) ClusterAnalysis(tag string) (utils.FragAmount, []utils.ResourceSummary) {
 	nodeStatus := sim.GetClusterNodeStatus()
 	if len(nodeStatus) == 0 {
@@ -203,6 +220,10 @@ func (sim *Simulator) SetTypicalPods() {
 		log.Errorf("sim.SetTypicalPods: (%.4f != 1.0): %v\n", sumRatio, sim.typicalPods)
 	}
 	sim.fragMemo = sync.Map{}
+}
+
+func (sim *Simulator) SetSkylinePods() {
+	sim.skylinePods = utils.GetSkylinePods(sim.workloadPods)
 }
 
 func (sim *Simulator) NodeGpuFragAmountMap(nodeResourceMap map[string]simontype.NodeResource) map[string]utils.FragAmount {
